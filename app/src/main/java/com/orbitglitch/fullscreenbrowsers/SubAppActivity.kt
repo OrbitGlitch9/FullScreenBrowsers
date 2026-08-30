@@ -8,7 +8,9 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.webkit.WebChromeClient
@@ -18,7 +20,6 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -44,7 +45,6 @@ class SubAppActivity : AppCompatActivity() {
 
         subApp = AppRepository(this).getById(subAppId) ?: run { finish(); return }
 
-        // Enable edge-to-edge layout window so we control full layout bounds
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -75,6 +75,10 @@ class SubAppActivity : AppCompatActivity() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = false
             }
             wv.webChromeClient = WebChromeClient()
+
+            if (subApp.fixDoubleClick) {
+                wv.setOnTouchListener(OnTouchListenerFixDoubleClick(subApp.doubleClickThresholdMs.toLong()))
+            }
         }
 
         container.addView(
@@ -144,6 +148,35 @@ class SubAppActivity : AppCompatActivity() {
             }
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    private class OnTouchListenerFixDoubleClick(private val thresholdMs: Long) : View.OnTouchListener {
+        private var prevDownTime: Long = 0L
+        private var prevX: Float = 0.0f
+        private var prevY: Float = 0.0f
+
+        @SuppressLint("ClickableViewAccessibility")
+        override fun onTouch(view: View, motionEvent: MotionEvent): Boolean {
+            val action = motionEvent.action
+            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_UP) {
+                val curX = motionEvent.x
+                val curY = motionEvent.y
+                val curDownTime = motionEvent.downTime
+                val diff = curDownTime - prevDownTime
+
+                if (prevX == curX && prevY == curY && diff < thresholdMs) {
+                    Log.d("SubAppTouch", "Ignoring duplicate touch | diff: $diff ms (threshold: $thresholdMs ms)")
+                    return true
+                }
+
+                if (action == MotionEvent.ACTION_UP) {
+                    prevX = curX
+                    prevY = curY
+                    prevDownTime = curDownTime
+                }
+            }
+            return false
+        }
     }
 
     companion object {

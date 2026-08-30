@@ -57,6 +57,8 @@ class EditSubAppActivity : AppCompatActivity() {
                 binding.switchHideNavigationBar.isChecked = app.hideNavigationBar
                 binding.switchHideStatusBar.isChecked = app.hideStatusBar
                 binding.etPunchHolePadding.setText(app.punchHolePadding.toString())
+                binding.switchFixDoubleClick.isChecked = app.fixDoubleClick
+                binding.etDoubleClickThreshold.setText(app.doubleClickThresholdMs.toString())
                 binding.etVolumeDownJs.setText(app.volumeDownJs)
                 binding.etVolumeUpJs.setText(app.volumeUpJs)
                 if (app.iconUrl.isNotBlank()) loadIconFromUrl(app.iconUrl)
@@ -112,6 +114,9 @@ class EditSubAppActivity : AppCompatActivity() {
         val paddingStr = binding.etPunchHolePadding.text.toString().trim()
         val padding = paddingStr.toIntOrNull() ?: 0
 
+        val thresholdStr = binding.etDoubleClickThreshold.text.toString().trim()
+        val threshold = thresholdStr.toIntOrNull() ?: 150
+
         val app = SubApp(
             id = existingId ?: UUID.randomUUID().toString(),
             title = title,
@@ -120,6 +125,8 @@ class EditSubAppActivity : AppCompatActivity() {
             hideNavigationBar = binding.switchHideNavigationBar.isChecked,
             hideStatusBar = binding.switchHideStatusBar.isChecked,
             punchHolePadding = padding,
+            fixDoubleClick = binding.switchFixDoubleClick.isChecked,
+            doubleClickThresholdMs = threshold,
             volumeDownJs = binding.etVolumeDownJs.text.toString().trim(),
             volumeUpJs = binding.etVolumeUpJs.text.toString().trim()
         )

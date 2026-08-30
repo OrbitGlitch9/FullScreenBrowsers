@@ -159,6 +159,43 @@
                 android:background="#DDD"
                 android:layout_marginBottom="12dp" />
 
+            <!-- Touch Fix Options -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Touch Settings"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchFixDoubleClick"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Enable double-click fix (ignore duplicate touches)"
+                android:checked="true"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilDoubleClickThreshold"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Double-click fix threshold (ms)"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etDoubleClickThreshold"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="150" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#DDD"
+                android:layout_marginBottom="12dp" />
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

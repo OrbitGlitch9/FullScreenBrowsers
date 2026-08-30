@@ -58,6 +58,8 @@ class AppRepository(context: Context) {
         put("hideNavigationBar", hideNavigationBar)
         put("hideStatusBar", hideStatusBar)
         put("punchHolePadding", punchHolePadding)
+        put("fixDoubleClick", fixDoubleClick)
+        put("doubleClickThresholdMs", doubleClickThresholdMs)
         put("volumeDownJs", volumeDownJs)
         put("volumeUpJs", volumeUpJs)
     }
@@ -70,6 +72,8 @@ class AppRepository(context: Context) {
         hideNavigationBar = optBoolean("hideNavigationBar", true),
         hideStatusBar = optBoolean("hideStatusBar", true),
         punchHolePadding = if (has("punchHolePadding")) optInt("punchHolePadding", 0) else if (optBoolean("fillPunchHole", true)) 0 else 24,
+        fixDoubleClick = optBoolean("fixDoubleClick", true),
+        doubleClickThresholdMs = optInt("doubleClickThresholdMs", 150),
         volumeDownJs = optString("volumeDownJs"),
         volumeUpJs = optString("volumeUpJs")
     )
