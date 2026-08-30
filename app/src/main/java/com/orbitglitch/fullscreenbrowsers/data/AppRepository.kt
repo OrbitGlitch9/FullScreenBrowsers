@@ -6,7 +6,6 @@ import org.json.JSONObject
 
 /**
  * Persists [SubApp] list as JSON in SharedPreferences.
- * Export/import stubs are ready for future cloud or file-based backup.
  */
 class AppRepository(context: Context) {
 
@@ -37,14 +36,12 @@ class AppRepository(context: Context) {
         prefs.edit().putString(KEY_LIST, arr.toString()).apply()
     }
 
-    /** Serialises the full configuration to a JSON string for backup. */
     fun exportJson(): String {
         val arr = JSONArray()
         getAll().forEach { arr.put(it.toJson()) }
         return JSONObject().put("sub_apps", arr).toString(2)
     }
 
-    /** Restores the full configuration from a previously exported JSON string. */
     fun importJson(json: String) {
         try {
             val obj = JSONObject(json)
@@ -54,13 +51,26 @@ class AppRepository(context: Context) {
     }
 
     private fun SubApp.toJson() = JSONObject().apply {
-        put("id", id); put("title", title); put("url", url)
-        put("iconUrl", iconUrl); put("volumeDownJs", volumeDownJs); put("volumeUpJs", volumeUpJs)
+        put("id", id)
+        put("title", title)
+        put("url", url)
+        put("iconUrl", iconUrl)
+        put("hideNavigationBar", hideNavigationBar)
+        put("hideStatusBar", hideStatusBar)
+        put("punchHolePadding", punchHolePadding)
+        put("volumeDownJs", volumeDownJs)
+        put("volumeUpJs", volumeUpJs)
     }
 
     private fun JSONObject.toSubApp() = SubApp(
-        id = optString("id"), title = optString("title"), url = optString("url"),
-        iconUrl = optString("iconUrl"), volumeDownJs = optString("volumeDownJs"),
+        id = optString("id"),
+        title = optString("title"),
+        url = optString("url"),
+        iconUrl = optString("iconUrl"),
+        hideNavigationBar = optBoolean("hideNavigationBar", true),
+        hideStatusBar = optBoolean("hideStatusBar", true),
+        punchHolePadding = if (has("punchHolePadding")) optInt("punchHolePadding", 0) else if (optBoolean("fillPunchHole", true)) 0 else 24,
+        volumeDownJs = optString("volumeDownJs"),
         volumeUpJs = optString("volumeUpJs")
     )
 

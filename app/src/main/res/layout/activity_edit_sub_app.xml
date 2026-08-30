@@ -114,6 +114,51 @@
                 android:background="#DDD"
                 android:layout_marginBottom="12dp" />
 
+            <!-- Fullscreen Options -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Display / Fullscreen Settings"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchHideNavigationBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Hide navigation bar"
+                android:checked="true"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchHideStatusBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Hide status bar"
+                android:checked="true"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilPunchHolePadding"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Padding for punch-hole (Recommended value: 24dp)"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPunchHolePadding"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="0" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#DDD"
+                android:layout_marginBottom="12dp" />
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

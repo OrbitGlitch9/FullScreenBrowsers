@@ -3,52 +3,63 @@ package com.orbitglitch.fullscreenbrowsers
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
+import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
+import android.view.WindowManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.orbitglitch.fullscreenbrowsers.data.AppRepository
 import com.orbitglitch.fullscreenbrowsers.data.SubApp
 
 /**
- * Full-screen WebView activity.
- *
- * Each sub-app is launched with [FLAG_ACTIVITY_NEW_DOCUMENT] + a unique data URI,
- * so every sub-app gets its own entry in the system Recent Tasks screen.
- * [documentLaunchMode="intoExisting"] in the manifest ensures re-launching the
- * same sub-app re-enters the existing task instead of creating a duplicate.
- *
- * Volume keys trigger optional JavaScript injection if configured.
+ * Custom Display / Full-screen WebView activity.
  */
 class SubAppActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var subApp: SubApp
+    private lateinit var container: FrameLayout
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
-        // ID is carried both in the data URI and as an extra (extra is the reliable source).
         val subAppId = intent.getStringExtra(EXTRA_SUB_APP_ID)
-            ?: intent.data?.lastPathSegment   // fallback: read from URI
+            ?: intent.data?.lastPathSegment
             ?: run { finish(); return }
 
         subApp = AppRepository(this).getById(subAppId) ?: run { finish(); return }
 
-        // Set the task description (label shown in Recents) to the sub-app's title.
+        // Enable edge-to-edge layout window so we control full layout bounds
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+
+        @Suppress("DEPRECATION")
         setTaskDescription(
-            @Suppress("DEPRECATION")
             android.app.ActivityManager.TaskDescription(subApp.title)
         )
+
+        container = FrameLayout(this).apply {
+            setBackgroundColor(Color.BLACK)
+        }
 
         webView = WebView(this).also { wv ->
             wv.settings.apply {
@@ -64,16 +75,20 @@ class SubAppActivity : AppCompatActivity() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = false
             }
             wv.webChromeClient = WebChromeClient()
-
-            @Suppress("DEPRECATION")
-            wv.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_FULLSCREEN or
-                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            )
         }
 
-        setContentView(webView)
+        container.addView(
+            webView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        setContentView(container)
+
+        applyPunchHolePadding()
+        applyDisplayToggles()
 
         val urlToLoad = subApp.url.ifBlank { "about:blank" }
         webView.loadUrl(if ("://" in urlToLoad) urlToLoad else "https://$urlToLoad")
@@ -83,6 +98,40 @@ class SubAppActivity : AppCompatActivity() {
                 if (webView.canGoBack()) webView.goBack() else finish()
             }
         })
+    }
+
+    private fun applyPunchHolePadding() {
+        val density = resources.displayMetrics.density
+        val paddingPx = (subApp.punchHolePadding * density).toInt()
+
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val leftPx = if (isLandscape) paddingPx else 0
+        val topPx = if (!isLandscape) paddingPx else 0
+
+        container.setPadding(leftPx, topPx, 0, 0)
+    }
+
+    private fun applyDisplayToggles() {
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
+        if (subApp.hideNavigationBar) {
+            windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+        } else {
+            windowInsetsController.show(WindowInsetsCompat.Type.navigationBars())
+        }
+
+        if (subApp.hideStatusBar) {
+            windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
+        } else {
+            windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyPunchHolePadding()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -100,13 +149,6 @@ class SubAppActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_SUB_APP_ID = "sub_app_id"
 
-        /**
-         * Builds an intent that opens (or re-focuses) the sub-app in its own
-         * Recent Tasks entry via [Intent.FLAG_ACTIVITY_NEW_DOCUMENT].
-         *
-         * The unique data URI `subapp://app/<id>` is what Android uses to key
-         * the document task — each distinct URI = distinct Recents entry.
-         */
         fun buildIntent(context: Context, subAppId: String): Intent =
             Intent(context, SubAppActivity::class.java).apply {
                 action = Intent.ACTION_VIEW

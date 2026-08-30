@@ -6,8 +6,10 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import com.orbitglitch.fullscreenbrowsers.data.AppRepository
 import com.orbitglitch.fullscreenbrowsers.data.SubApp
 import com.orbitglitch.fullscreenbrowsers.databinding.ActivityEditSubAppBinding
@@ -18,10 +20,6 @@ import kotlinx.coroutines.withContext
 import java.net.URL
 import java.util.UUID
 
-/**
- * Shared activity for creating and modifying a [SubApp].
- * Launch without [EXTRA_SUB_APP_ID] for create mode; with an ID for edit mode.
- */
 class EditSubAppActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityEditSubAppBinding
@@ -30,9 +28,17 @@ class EditSubAppActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+
         binding = ActivityEditSubAppBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
 
         repo = AppRepository(this)
         existingId = intent.getStringExtra(EXTRA_SUB_APP_ID)
@@ -48,6 +54,9 @@ class EditSubAppActivity : AppCompatActivity() {
                 binding.etTitle.setText(app.title)
                 binding.etUrl.setText(app.url)
                 binding.etIconUrl.setText(app.iconUrl)
+                binding.switchHideNavigationBar.isChecked = app.hideNavigationBar
+                binding.switchHideStatusBar.isChecked = app.hideStatusBar
+                binding.etPunchHolePadding.setText(app.punchHolePadding.toString())
                 binding.etVolumeDownJs.setText(app.volumeDownJs)
                 binding.etVolumeUpJs.setText(app.volumeUpJs)
                 if (app.iconUrl.isNotBlank()) loadIconFromUrl(app.iconUrl)
@@ -69,7 +78,6 @@ class EditSubAppActivity : AppCompatActivity() {
             loadIconFromUrl(iconUrl)
             return
         }
-        // Auto-derive favicon from page URL
         val pageUrl = binding.etUrl.text.toString().trim()
         if (pageUrl.isBlank()) { Toast.makeText(this, "Enter a URL first", Toast.LENGTH_SHORT).show(); return }
         val host = try { URL(if ("://" in pageUrl) pageUrl else "https://$pageUrl").host } catch (_: Exception) { null }
@@ -101,11 +109,17 @@ class EditSubAppActivity : AppCompatActivity() {
         if (title.isBlank()) { binding.etTitle.error = "Required"; return }
         if (url.isBlank()) { binding.etUrl.error = "Required"; return }
 
+        val paddingStr = binding.etPunchHolePadding.text.toString().trim()
+        val padding = paddingStr.toIntOrNull() ?: 0
+
         val app = SubApp(
             id = existingId ?: UUID.randomUUID().toString(),
             title = title,
             url = url,
             iconUrl = binding.etIconUrl.text.toString().trim(),
+            hideNavigationBar = binding.switchHideNavigationBar.isChecked,
+            hideStatusBar = binding.switchHideStatusBar.isChecked,
+            punchHolePadding = padding,
             volumeDownJs = binding.etVolumeDownJs.text.toString().trim(),
             volumeUpJs = binding.etVolumeUpJs.text.toString().trim()
         )
