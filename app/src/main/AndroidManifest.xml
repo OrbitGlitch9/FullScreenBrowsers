@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -10,19 +12,52 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.FullScreenBrowsers">
+        android:theme="@style/Theme.FullScreenBrowsers"
+        android:usesCleartextTraffic="true">
+
+        <!-- ── Main list screen ──────────────────────────────────────────── -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.FullScreenBrowsers"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- ── Create / Edit sub-app ─────────────────────────────────────── -->
+        <activity
+            android:name=".EditSubAppActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- ── Full-screen WebView ───────────────────────────────────────── -->
+        <!--
+            documentLaunchMode="intoExisting":
+              - Each unique data URI (subapp://app/<id>) gets its own Recents entry.
+              - Re-launching the same sub-app re-enters the existing task rather
+                than creating a duplicate.
+        -->
+        <activity
+            android:name=".SubAppActivity"
+            android:exported="false"
+            android:documentLaunchMode="intoExisting"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
+        <!-- ── Home-screen shortcut trampoline ──────────────────────────── -->
+        <activity
+            android:name=".BrowserShortcutActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="subapp" />
+            </intent-filter>
+        </activity>
+
     </application>
 
 </manifest>
