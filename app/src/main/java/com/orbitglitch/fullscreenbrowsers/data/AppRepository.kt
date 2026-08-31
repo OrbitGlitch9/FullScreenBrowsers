@@ -42,12 +42,16 @@ class AppRepository(context: Context) {
         return JSONObject().put("sub_apps", arr).toString(2)
     }
 
-    fun importJson(json: String) {
-        try {
+    fun importJson(json: String): Boolean {
+        return try {
             val obj = JSONObject(json)
             val arr = obj.getJSONArray("sub_apps")
-            persist((0 until arr.length()).map { arr.getJSONObject(it).toSubApp() })
-        } catch (_: Exception) { /* surface to UI later */ }
+            val list = (0 until arr.length()).map { arr.getJSONObject(it).toSubApp() }
+            persist(list)
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun SubApp.toJson() = JSONObject().apply {

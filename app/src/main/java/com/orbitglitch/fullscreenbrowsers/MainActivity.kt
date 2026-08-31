@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URL
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
@@ -40,16 +41,26 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result -> if (result.resultCode == Activity.RESULT_OK) refresh() }
 
+    private val exportLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        uri?.let { saveListToUri(it) }
+    }
+
+    private val importLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { loadListFromUri(it) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Ensure system decor is fitsSystemWindows friendly
         WindowCompat.setDecorFitsSystemWindows(window, true)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Handle window insets so content is padded under status/nav bars
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -72,6 +83,14 @@ class MainActivity : AppCompatActivity() {
             editLauncher.launch(EditSubAppActivity.intentForCreate(this))
         }
 
+        binding.btnSaveList.setOnClickListener {
+            exportLauncher.launch("sub_apps_backup.json")
+        }
+
+        binding.btnLoadList.setOnClickListener {
+            importLauncher.launch(arrayOf("application/json", "text/*", "*/*"))
+        }
+
         refresh()
     }
 
@@ -82,6 +101,34 @@ class MainActivity : AppCompatActivity() {
         items.addAll(repo.getAll())
         adapter.notifyDataSetChanged()
         binding.tvEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+    }
+
+    private fun saveListToUri(uri: Uri) {
+        try {
+            contentResolver.openOutputStream(uri)?.use { outputStream ->
+                val jsonString = repo.exportJson()
+                outputStream.write(jsonString.toByteArray(StandardCharsets.UTF_8))
+            }
+            Toast.makeText(this, "Configuration saved successfully!", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to save: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun loadListFromUri(uri: Uri) {
+        try {
+            val jsonString = contentResolver.openInputStream(uri)?.use { inputStream ->
+                inputStream.bufferedReader(StandardCharsets.UTF_8).readText()
+            }
+            if (jsonString != null && repo.importJson(jsonString)) {
+                refresh()
+                Toast.makeText(this, "Configuration loaded successfully!", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Invalid JSON configuration file", Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to load: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 
     inner class SubAppAdapter : ArrayAdapter<SubApp>(this, 0, items) {
