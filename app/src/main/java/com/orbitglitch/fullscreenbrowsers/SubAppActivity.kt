@@ -94,14 +94,24 @@ class SubAppActivity : AppCompatActivity() {
         applyPunchHolePadding()
         applyDisplayToggles()
 
-        val urlToLoad = subApp.url.ifBlank { "about:blank" }
-        webView.loadUrl(if ("://" in urlToLoad) urlToLoad else "https://$urlToLoad")
+        val initialUrl = getFormattedUrl(subApp.url)
+        webView.loadUrl(initialUrl)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (webView.canGoBack()) webView.goBack() else finish()
+                if (webView.canGoBack()) {
+                    webView.goBack()
+                } else {
+                    val targetUrl = getFormattedUrl(subApp.url)
+                    webView.loadUrl(targetUrl)
+                }
             }
         })
+    }
+
+    private fun getFormattedUrl(rawUrl: String): String {
+        val trimmed = rawUrl.ifBlank { "about:blank" }
+        return if ("://" in trimmed) trimmed else "https://$trimmed"
     }
 
     private fun applyPunchHolePadding() {
