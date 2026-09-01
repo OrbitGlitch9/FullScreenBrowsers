@@ -50,6 +50,8 @@
         <activity
             android:name=".BrowserShortcutActivity"
             android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.NoDisplay"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
