@@ -21,6 +21,7 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityManagerCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -29,7 +30,7 @@ import com.orbitglitch.fullscreenbrowsers.data.AppRepository
 import com.orbitglitch.fullscreenbrowsers.data.SubApp
 
 /**
- * Custom Display / Full-screen WebView activity.
+ * Custom Display / Full-screen WebView activity using modern WindowInsets APIs.
  */
 class SubAppActivity : AppCompatActivity() {
 
@@ -45,22 +46,9 @@ class SubAppActivity : AppCompatActivity() {
 
         subApp = AppRepository(this).getById(subAppId) ?: run { super.onCreate(savedInstanceState); finish(); return }
 
-        // Request title removal before super.onCreate if full screen requested
         requestWindowFeature(Window.FEATURE_NO_TITLE)
 
         super.onCreate(savedInstanceState)
-
-        // Configure window flags based on hideStatusBar toggle
-        if (subApp.hideStatusBar) {
-            @Suppress("DEPRECATION")
-            window.setFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        }
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -69,10 +57,7 @@ class SubAppActivity : AppCompatActivity() {
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
 
-        @Suppress("DEPRECATION")
-        setTaskDescription(
-            android.app.ActivityManager.TaskDescription(subApp.title)
-        )
+        title = subApp.title
 
         container = FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
