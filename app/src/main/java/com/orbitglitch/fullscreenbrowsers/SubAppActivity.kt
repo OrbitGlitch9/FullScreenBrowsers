@@ -12,6 +12,7 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.Window
 import android.view.WindowManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -20,6 +21,7 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -37,13 +39,28 @@ class SubAppActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
         val subAppId = intent.getStringExtra(EXTRA_SUB_APP_ID)
             ?: intent.data?.lastPathSegment
-            ?: run { finish(); return }
+            ?: run { super.onCreate(savedInstanceState); finish(); return }
 
-        subApp = AppRepository(this).getById(subAppId) ?: run { finish(); return }
+        subApp = AppRepository(this).getById(subAppId) ?: run { super.onCreate(savedInstanceState); finish(); return }
+
+        // Request title removal before super.onCreate if full screen requested
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
+
+        super.onCreate(savedInstanceState)
+
+        // Configure window flags based on hideStatusBar toggle
+        if (subApp.hideStatusBar) {
+            @Suppress("DEPRECATION")
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        }
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -91,7 +108,12 @@ class SubAppActivity : AppCompatActivity() {
 
         setContentView(container)
 
-        applyPunchHolePadding()
+        // Register window insets listener to handle system status and navigation bar padding
+        ViewCompat.setOnApplyWindowInsetsListener(container) { _, insets ->
+            applyContainerPadding(insets)
+            insets
+        }
+
         applyDisplayToggles()
 
         val initialUrl = getFormattedUrl(subApp.url)
@@ -109,20 +131,33 @@ class SubAppActivity : AppCompatActivity() {
         })
     }
 
+    private fun applyContainerPadding(insets: WindowInsetsCompat? = null) {
+        val systemBars = insets?.getInsets(WindowInsetsCompat.Type.systemBars())
+            ?: ViewCompat.getRootWindowInsets(container)?.getInsets(WindowInsetsCompat.Type.systemBars())
+
+        val topInset = if (!subApp.hideStatusBar && systemBars != null) systemBars.top else 0
+        val bottomInset = if (!subApp.hideNavigationBar && systemBars != null) systemBars.bottom else 0
+        val leftInset = systemBars?.left ?: 0
+        val rightInset = systemBars?.right ?: 0
+
+        val density = resources.displayMetrics.density
+        val customPaddingPx = (subApp.punchHolePadding * density).toInt()
+
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val punchHoleLeft = if (isLandscape) customPaddingPx else 0
+        val punchHoleTop = if (!isLandscape) customPaddingPx else 0
+
+        container.setPadding(
+            leftInset + punchHoleLeft,
+            topInset + punchHoleTop,
+            rightInset,
+            bottomInset
+        )
+    }
+
     private fun getFormattedUrl(rawUrl: String): String {
         val trimmed = rawUrl.ifBlank { "about:blank" }
         return if ("://" in trimmed) trimmed else "https://$trimmed"
-    }
-
-    private fun applyPunchHolePadding() {
-        val density = resources.displayMetrics.density
-        val paddingPx = (subApp.punchHolePadding * density).toInt()
-
-        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val leftPx = if (isLandscape) paddingPx else 0
-        val topPx = if (!isLandscape) paddingPx else 0
-
-        container.setPadding(leftPx, topPx, 0, 0)
     }
 
     private fun applyDisplayToggles() {
@@ -145,7 +180,7 @@ class SubAppActivity : AppCompatActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        applyPunchHolePadding()
+        applyContainerPadding()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
