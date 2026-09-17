@@ -39,12 +39,15 @@
               - Each unique data URI (subapp://app/<id>) gets its own Recents entry.
               - Re-launching the same sub-app re-enters the existing task rather
                 than creating a duplicate.
+            configChanges:
+              - Handles screen resize (dual-screen / split-screen / foldables), orientation,
+                screen layout, and smallest screen size in-place without destroying/recreating the Activity.
         -->
         <activity
             android:name=".SubAppActivity"
             android:exported="false"
             android:documentLaunchMode="intoExisting"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
 
         <!-- ── Home-screen shortcut trampoline ──────────────────────────── -->
         <activity

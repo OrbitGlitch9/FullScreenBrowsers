@@ -37,6 +37,7 @@ class SubAppActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var subApp: SubApp
     private lateinit var container: FrameLayout
+    private var lastOrientation: Int = Configuration.ORIENTATION_UNDEFINED
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,6 +50,8 @@ class SubAppActivity : AppCompatActivity() {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
 
         super.onCreate(savedInstanceState)
+
+        lastOrientation = resources.configuration.orientation
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -101,8 +104,13 @@ class SubAppActivity : AppCompatActivity() {
 
         applyDisplayToggles()
 
-        val initialUrl = getFormattedUrl(subApp.url)
-        webView.loadUrl(initialUrl)
+        // Restore saved state if returning from saved instance (e.g. process death)
+        if (savedInstanceState != null) {
+            webView.restoreState(savedInstanceState)
+        } else {
+            val initialUrl = getFormattedUrl(subApp.url)
+            webView.loadUrl(initialUrl)
+        }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -114,6 +122,16 @@ class SubAppActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        webView.saveState(outState)
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+        webView.restoreState(savedInstanceState)
     }
 
     private fun applyContainerPadding(insets: WindowInsetsCompat? = null) {
@@ -166,6 +184,15 @@ class SubAppActivity : AppCompatActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         applyContainerPadding()
+
+        val currentOrientation = newConfig.orientation
+        val isOrientationChangeOnly = (currentOrientation != lastOrientation)
+        lastOrientation = currentOrientation
+
+        // Reload only if the configuration change is NOT solely an orientation rotation
+        if (!isOrientationChangeOnly) {
+            webView.reload()
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
