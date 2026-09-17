@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.Surface
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
@@ -21,7 +22,6 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityManagerCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -135,8 +135,8 @@ class SubAppActivity : AppCompatActivity() {
     }
 
     private fun applyContainerPadding(insets: WindowInsetsCompat? = null) {
-        val systemBars = insets?.getInsets(WindowInsetsCompat.Type.systemBars())
-            ?: ViewCompat.getRootWindowInsets(container)?.getInsets(WindowInsetsCompat.Type.systemBars())
+        val rootInsets = insets ?: ViewCompat.getRootWindowInsets(container)
+        val systemBars = rootInsets?.getInsets(WindowInsetsCompat.Type.systemBars())
 
         val topInset = if (!subApp.hideStatusBar && systemBars != null) systemBars.top else 0
         val bottomInset = if (!subApp.hideNavigationBar && systemBars != null) systemBars.bottom else 0
@@ -147,13 +147,41 @@ class SubAppActivity : AppCompatActivity() {
         val customPaddingPx = (subApp.punchHolePadding * density).toInt()
 
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val punchHoleLeft = if (isLandscape) customPaddingPx else 0
-        val punchHoleTop = if (!isLandscape) customPaddingPx else 0
+        var punchHoleLeft = 0
+        var punchHoleRight = 0
+        var punchHoleTop = 0
+
+        if (isLandscape) {
+            // Check actual display rotation to determine camera position in landscape mode
+            val rotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                display?.rotation ?: Surface.ROTATION_90
+            } else {
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay.rotation
+            }
+
+            // Also inspect DisplayCutout insets if available for exact cutout side
+            val displayCutout = rootInsets?.getInsets(WindowInsetsCompat.Type.displayCutout())
+            if (displayCutout != null && displayCutout.right > 0) {
+                punchHoleRight = customPaddingPx
+            } else if (displayCutout != null && displayCutout.left > 0) {
+                punchHoleLeft = customPaddingPx
+            } else {
+                // Fallback by display rotation: ROTATION_270 = rotated 270 deg (camera on right side)
+                if (rotation == Surface.ROTATION_270) {
+                    punchHoleRight = customPaddingPx
+                } else {
+                    punchHoleLeft = customPaddingPx
+                }
+            }
+        } else {
+            punchHoleTop = customPaddingPx
+        }
 
         container.setPadding(
             leftInset + punchHoleLeft,
             topInset + punchHoleTop,
-            rightInset,
+            rightInset + punchHoleRight,
             bottomInset
         )
     }
